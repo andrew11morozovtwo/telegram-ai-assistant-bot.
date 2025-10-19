@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-ai-bot
+    restart: unless-stopped
+    
+    # Переменные окружения из .env файла
+    env_file:
+      - .env
+    
+    # Переменные окружения (альтернативный способ)
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BACKUP_OPENAI_API_KEY=${BACKUP_OPENAI_API_KEY}
+    
+    # Монтируем директорию для логов (чтобы логи сохранялись на хосте)
+    volumes:
+      - ./logs:/app/logs
+      - ./telegram_bot_logs.csv:/app/telegram_bot_logs.csv
+    
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Ограничения ресурсов (опционально)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
