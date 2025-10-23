@@ -98,33 +98,39 @@ def process_url_in_text(text, bot, chat_id):
         return text
 
 # Функция для извлечения текста из URL
+import random
+
 def extract_text_from_url(url):
+    # Расширенный список User-Agent, выбор случайного при каждом запросе
+    USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.88 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
+    ]
+    headers = {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": url,
+        "Connection": "keep-alive",
+        "DNT": "1",
+        # "Cookie": ""  # Можно добавить пустую строку или свой набор,
+    }
     try:
-        parsed_url = urlparse(url)
-
-        if not parsed_url.netloc:
-            return "Ошибка: Некорректный URL"
-
-        conn = http.client.HTTPSConnection(parsed_url.netloc)
-        path = parsed_url.path or "/"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-
-        conn.request("GET", path, headers=headers)
-        response = conn.getresponse()
-
-        if response.status == 200:
-            page_content = response.read().decode("utf-8")
-            soup = BeautifulSoup(page_content, 'html.parser')
-            text_content = soup.get_text()
-            cleaned_text = "\n".join(line.strip() for line in text_content.splitlines() if line.strip())
-            conn.close()
-            return cleaned_text
-        else:
-            conn.close()
-            return f"Ошибка: {response.status}"
-
+        resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        if resp.status_code != 200:
+            return f"Ошибка: {resp.status_code}"
+        # Пытаемся определить правильную кодировку
+        resp.encoding = resp.apparent_encoding if resp.encoding is None else resp.encoding
+        page_content = resp.text
+        soup = BeautifulSoup(page_content, 'html.parser')
+        text_content = soup.get_text(separator='\n')
+        cleaned_text = "\n".join(line.strip() for line in text_content.splitlines() if line.strip())
+        # Опционально: урезать по длине, если слишком много текста
+        if len(cleaned_text) > 5000:
+            cleaned_text = cleaned_text[:5000] + "..."
+        return cleaned_text
     except Exception as e:
         return f"Произошла ошибка: {e}"
 
